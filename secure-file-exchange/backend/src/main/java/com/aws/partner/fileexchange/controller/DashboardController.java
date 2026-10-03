@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -37,9 +40,9 @@ public class DashboardController {
         DashboardStats stats = new DashboardStats();
 
         List<Partner> partners = partnerRepository.findAll();
-        stats.setTotalPartners(partners.size());
-        stats.setActivePartners(partners.stream().filter(p -> "ACTIVE".equalsIgnoreCase(p.getStatus())).count());
-        stats.setSuspendedPartners(partners.stream().filter(p -> "SUSPENDED".equalsIgnoreCase(p.getStatus())).count());
+        stats.setTotalPartners(partnerRepository.count());
+        stats.setActivePartners(partnerRepository.countByStatusIgnoreCase("ACTIVE"));
+        stats.setSuspendedPartners(partnerRepository.countByStatusIgnoreCase("SUSPENDED"));
 
         List<FileTransfer> transfers = transferRepository.findAll();
         stats.setTotalTransfers(transfers.size());
@@ -59,7 +62,7 @@ public class DashboardController {
         long totalBytes = transfers.stream().mapToLong(FileTransfer::getFileSize).sum();
         stats.setTotalBytesTransferred(totalBytes);
 
-        double rate = transfers.isEmpty() ? 100.0 : ((double) validated / transfers.size()) * 100.0;
+        double rate = transfers.isEmpty() ? 0.0 : ((double) validated / transfers.size()) * 100.0;
         stats.setSuccessRatePercent(Math.round(rate * 10.0) / 10.0);
 
         // Chart 1: Status distribution
@@ -71,16 +74,31 @@ public class DashboardController {
         );
         stats.setFilesByStatus(statusBreakdown);
 
-        // Chart 2: Hourly activity timeline simulation
-        List<Map<String, Object>> hourly = List.of(
-                Map.of("time", "12:00", "transfers", 12, "bytes", 4500000, "violations", 1),
-                Map.of("time", "13:00", "transfers", 19, "bytes", 7200000, "violations", 0),
-                Map.of("time", "14:00", "transfers", 15, "bytes", 5800000, "violations", 2),
-                Map.of("time", "15:00", "transfers", 28, "bytes", 11200000, "violations", 1),
-                Map.of("time", "16:00", "transfers", 35, "bytes", 14500000, "violations", 0),
-                Map.of("time", "17:00", "transfers", 22, "bytes", 8900000, "violations", 1),
-                Map.of("time", "18:00", "transfers", (int) Math.max(8, transfers.size() * 2), "bytes", (int) Math.max(3000000, totalBytes), "violations", (int) quarantined)
-        );
+        // Chart 2: Activity grouped from persisted transfer timestamps.
+        Map<String, Map<String, Object>> hourlyByTime = new TreeMap<>();
+        for (FileTransfer transfer : transfers) {
+            if (transfer.getCreatedAt() == null) continue;
+            try {
+                Instant createdAt = Instant.parse(transfer.getCreatedAt());
+                String hour = createdAt.atZone(ZoneOffset.UTC).truncatedTo(java.time.temporal.ChronoUnit.HOURS).toString();
+                Map<String, Object> point = hourlyByTime.computeIfAbsent(hour, key -> {
+                    Map<String, Object> bucket = new HashMap<>();
+                    bucket.put("time", key);
+                    bucket.put("transfers", 0L);
+                    bucket.put("bytes", 0L);
+                    bucket.put("violations", 0L);
+                    return bucket;
+                });
+                point.compute("transfers", (key, value) -> (Long) value + 1);
+                point.compute("bytes", (key, value) -> (Long) value + transfer.getFileSize());
+                if ("QUARANTINED".equalsIgnoreCase(transfer.getStatus())) {
+                    point.compute("violations", (key, value) -> (Long) value + 1);
+                }
+            } catch (java.time.format.DateTimeParseException e) {
+                // Ignore legacy records without a parseable timestamp in the time-series chart.
+            }
+        }
+        List<Map<String, Object>> hourly = new ArrayList<>(hourlyByTime.values());
         stats.setTransfersByHour(hourly);
 
         // Chart 3: Partner Volume
@@ -100,6 +118,6 @@ public class DashboardController {
 
     @GetMapping("/recent")
     public ResponseEntity<List<FileTransfer>> getRecentTransfers() {
-        return ResponseEntity.ok(transferRepository.findRecent(10));
+        return ResponseEntity.ok(transferRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, 10)));
     }
 }

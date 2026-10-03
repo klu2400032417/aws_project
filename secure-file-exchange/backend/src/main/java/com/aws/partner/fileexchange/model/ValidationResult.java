@@ -1,17 +1,31 @@
 package com.aws.partner.fileexchange.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Embeddable;
 import java.util.ArrayList;
 import java.util.List;
 
+@Embeddable
 public class ValidationResult {
+    @Column(name = "validation_valid")
     private boolean valid;
+    @Column(name = "validation_status")
     private String status; // VALIDATED, QUARANTINED, DUPLICATE, FAILED
+    @Column(name = "validation_reason", length = 2048)
     private String reason;
+    @Column(name = "validation_sha256_hash", length = 64)
     private String sha256Hash;
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "validation_security_flags", length = 2048)
     private List<String> securityFlags = new ArrayList<>();
+    @Column(name = "validation_quarantined_s3_key")
     private String quarantinedS3Key;
+    @Column(name = "validation_validated_s3_key")
     private String validatedS3Key;
+    @Column(name = "validation_processing_time_ms")
     private long processingTimeMs;
+    @Column(name = "validation_timestamp")
     private String timestamp;
 
     public ValidationResult() {}

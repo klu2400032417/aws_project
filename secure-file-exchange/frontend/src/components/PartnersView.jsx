@@ -18,6 +18,7 @@ import {
 
 export default function PartnersView({ 
   partners, 
+  error,
   onRefresh, 
   onCreatePartner, 
   onToggleStatus 
@@ -26,6 +27,7 @@ export default function PartnersView({
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -33,22 +35,22 @@ export default function PartnersView({
     name: '',
     company: '',
     contactEmail: '',
-    accessLevel: 'READ_WRITE',
-    maxFileSizeMb: 25,
-    allowedFileTypes: '.csv, .json, .xml, .pdf',
-    ipWhitelist: '198.51.100.0/24',
-    pgpKeyFingerprint: '4A8B-29DF-C71E-9041'
+    accessLevel: '',
+    maxFileSizeMb: '',
+    allowedFileTypes: '',
+    ipWhitelist: '',
+    pgpKeyFingerprint: ''
   });
 
   const filtered = partners.filter(p => {
-    if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+    if (statusFilter !== 'ALL' && p.status?.toUpperCase() !== statusFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       return (
-        p.name.toLowerCase().includes(q) ||
-        p.partnerId.toLowerCase().includes(q) ||
-        p.company.toLowerCase().includes(q) ||
-        p.contactEmail.toLowerCase().includes(q)
+        p.name?.toLowerCase().includes(q) ||
+        p.partnerId?.toLowerCase().includes(q) ||
+        p.company?.toLowerCase().includes(q) ||
+        p.contactEmail?.toLowerCase().includes(q)
       );
     }
     return true;
@@ -56,29 +58,43 @@ export default function PartnersView({
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setActionError('');
     const allowed = formData.allowedFileTypes
       .split(',')
       .map(s => s.trim().toLowerCase())
       .filter(Boolean)
       .map(s => s.startsWith('.') ? s : `.${s}`);
 
-    await onCreatePartner({
-      ...formData,
-      allowedFileTypes: allowed,
-      maxFileSizeMb: Number(formData.maxFileSizeMb)
-    });
-    setShowCreateModal(false);
-    setFormData({
-      partnerId: '',
-      name: '',
-      company: '',
-      contactEmail: '',
-      accessLevel: 'READ_WRITE',
-      maxFileSizeMb: 25,
-      allowedFileTypes: '.csv, .json, .xml, .pdf',
-      ipWhitelist: '198.51.100.0/24',
-      pgpKeyFingerprint: ''
-    });
+    try {
+      await onCreatePartner({
+        ...formData,
+        allowedFileTypes: allowed,
+        maxFileSizeMb: Number(formData.maxFileSizeMb)
+      });
+      setShowCreateModal(false);
+      setFormData({
+        partnerId: '',
+        name: '',
+        company: '',
+        contactEmail: '',
+        accessLevel: '',
+        maxFileSizeMb: '',
+        allowedFileTypes: '',
+        ipWhitelist: '',
+        pgpKeyFingerprint: ''
+      });
+    } catch (err) {
+      setActionError(err.message || 'Unable to create partner.');
+    }
+  };
+
+  const handleToggleStatus = async (partnerId, status) => {
+    setActionError('');
+    try {
+      await onToggleStatus(partnerId, status);
+    } catch (err) {
+      setActionError(err.message || 'Unable to update partner status.');
+    }
   };
 
   return (
@@ -144,9 +160,34 @@ export default function PartnersView({
       </div>
 
       {/* Partners Grid */}
+      {error && (
+        <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+      {actionError && !showCreateModal && (
+        <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {actionError}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {!error && filtered.length === 0 && (
+          <div className="md:col-span-2 rounded-xl border border-slate-800 bg-slate-900/80 p-8 text-center">
+            <Users className="mx-auto h-8 w-8 text-slate-500" />
+            <h2 className="mt-3 text-sm font-semibold text-white">
+              {partners.length === 0 ? 'No partners registered' : 'No partners match your filters'}
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {partners.length === 0
+                ? 'Register a partner to add a record to the database.'
+                : 'Try changing the search or status filter.'}
+            </p>
+          </div>
+        )}
         {filtered.map((partner) => {
-          const isActive = partner.status === 'ACTIVE';
+          const isActive = partner.status?.toUpperCase() === 'ACTIVE';
           return (
             <div
               key={partner.partnerId}
@@ -172,7 +213,7 @@ export default function PartnersView({
                 </div>
 
                 <button
-                  onClick={() => onToggleStatus(partner.partnerId, isActive ? 'SUSPENDED' : 'ACTIVE')}
+                  onClick={() => handleToggleStatus(partner.partnerId, isActive ? 'SUSPENDED' : 'ACTIVE')}
                   className={`px-2.5 py-1 rounded text-xs font-semibold border transition-all ${
                     isActive
                       ? 'bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border-rose-800/80'
@@ -199,7 +240,7 @@ export default function PartnersView({
                     <Key className="w-3.5 h-3.5 text-indigo-400" />
                     <span>SFTP Username (Production):</span>
                   </span>
-                  <span className="font-mono text-slate-300 text-[11px]">{partner.sftpUsername || 'sftp-' + partner.partnerId.toLowerCase()}</span>
+                  <span className="font-mono text-slate-300 text-[11px]">                  {partner.sftpUsername || 'Not configured'}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-slate-400">
@@ -261,8 +302,7 @@ export default function PartnersView({
                   <label className="block text-slate-400 font-medium mb-1">Partner Identifier</label>
                   <input
                     type="text"
-                    required
-                    placeholder="e.g. PRT-ACME-CORP"
+                    placeholder="Optional; generated if blank"
                     value={formData.partnerId}
                     onChange={(e) => setFormData({ ...formData, partnerId: e.target.value.toUpperCase() })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono"
@@ -273,7 +313,7 @@ export default function PartnersView({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Acme Corporation"
+                    placeholder="Organization name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200"
@@ -287,7 +327,7 @@ export default function PartnersView({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Acme Global Logistics LLC"
+                    placeholder="Legal entity"
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200"
@@ -298,7 +338,7 @@ export default function PartnersView({
                   <input
                     type="email"
                     required
-                    placeholder="partner-ops@acme.com"
+                    placeholder="Contact email"
                     value={formData.contactEmail}
                     onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200"
@@ -310,10 +350,12 @@ export default function PartnersView({
                 <div>
                   <label className="block text-slate-400 font-medium mb-1">Access Level</label>
                   <select
+                    required
                     value={formData.accessLevel}
                     onChange={(e) => setFormData({ ...formData, accessLevel: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200"
                   >
+                    <option value="" disabled>Select access level</option>
                     <option value="READ_WRITE">READ_WRITE (Bi-directional)</option>
                     <option value="READ_ONLY">READ_ONLY (Download Only)</option>
                     <option value="ENCRYPTED_ONLY">ENCRYPTED_ONLY (PGP Enforced)</option>
@@ -324,8 +366,8 @@ export default function PartnersView({
                   <label className="block text-slate-400 font-medium mb-1">Max File Quota (MB)</label>
                   <input
                     type="number"
+                    required
                     min="1"
-                    max="100"
                     value={formData.maxFileSizeMb}
                     onChange={(e) => setFormData({ ...formData, maxFileSizeMb: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono"
@@ -337,7 +379,8 @@ export default function PartnersView({
                 <label className="block text-slate-400 font-medium mb-1">Allowed File Extensions (Comma separated)</label>
                 <input
                   type="text"
-                  placeholder=".csv, .json, .xml, .pdf, .pgp"
+                  required
+                  placeholder="Comma-separated file extensions"
                   value={formData.allowedFileTypes}
                   onChange={(e) => setFormData({ ...formData, allowedFileTypes: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono"
@@ -349,7 +392,7 @@ export default function PartnersView({
                   <label className="block text-slate-400 font-medium mb-1">IP CIDR Whitelist</label>
                   <input
                     type="text"
-                    placeholder="198.51.100.0/24"
+                    placeholder="Optional"
                     value={formData.ipWhitelist}
                     onChange={(e) => setFormData({ ...formData, ipWhitelist: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono"
@@ -359,7 +402,7 @@ export default function PartnersView({
                   <label className="block text-slate-400 font-medium mb-1">PGP Key Fingerprint (Optional)</label>
                   <input
                     type="text"
-                    placeholder="99AF-12CD-8812-4401"
+                    placeholder="Optional fingerprint"
                     value={formData.pgpKeyFingerprint}
                     onChange={(e) => setFormData({ ...formData, pgpKeyFingerprint: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono"
@@ -368,6 +411,9 @@ export default function PartnersView({
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-800">
+                {actionError && (
+                  <p role="alert" className="mr-auto text-xs text-rose-300">{actionError}</p>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}

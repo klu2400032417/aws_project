@@ -13,7 +13,6 @@ import {
   Shield, 
   Download, 
   ExternalLink,
-  Zap
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -33,8 +32,7 @@ export default function DashboardView({
   stats, 
   recentTransfers, 
   onSelectTransfer, 
-  onNavigateTab, 
-  onRunQuickTest 
+  onNavigateTab
 }) {
   const formatBytes = (bytes) => {
     if (!bytes || bytes === 0) return '0 B';
@@ -52,12 +50,7 @@ export default function DashboardView({
     INCOMING: 'bg-sky-950 text-sky-300 border-sky-800'
   };
 
-  const pieData = stats?.filesByStatus || [
-    { name: 'Validated', value: stats?.successfulTransfers || 0, color: '#10b981' },
-    { name: 'Quarantined', value: stats?.quarantinedFiles || 0, color: '#ef4444' },
-    { name: 'Duplicate', value: stats?.duplicateFiles || 0, color: '#f59e0b' },
-    { name: 'Failed', value: stats?.failedTransfers || 0, color: '#64748b' },
-  ];
+  const pieData = stats?.filesByStatus || [];
 
   return (
     <div className="space-y-6">
@@ -66,36 +59,21 @@ export default function DashboardView({
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Executive Dashboard</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time partner ingestion metrics, S3 bucket partition activity, and automated Lambda validation telemetry.
+            Partner, transfer, validation, and storage metrics from persisted application records.
           </p>
         </div>
-
-        {/* Live Quick Demo Triggers */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>Quick Test:</span>
-          </span>
           <button
-            onClick={() => onRunQuickTest('VALID_CLAIMS_CSV')}
-            className="px-2.5 py-1 rounded bg-emerald-900/40 hover:bg-emerald-800/50 text-emerald-300 text-xs font-medium border border-emerald-700 transition-colors"
-            title="Upload Valid Claims CSV"
+            onClick={() => onNavigateTab('partners')}
+            className="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors"
           >
-            + Valid CSV
+            Register Partner
           </button>
           <button
-            onClick={() => onRunQuickTest('MALICIOUS_EXE')}
-            className="px-2.5 py-1 rounded bg-rose-900/40 hover:bg-rose-800/50 text-rose-300 text-xs font-medium border border-rose-700 transition-colors"
-            title="Test Prohibited Executable (.exe)"
+            onClick={() => onNavigateTab('upload')}
+            className="px-2.5 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition-colors"
           >
-            + Malware .exe
-          </button>
-          <button
-            onClick={() => onRunQuickTest('DUPLICATE_PAYLOAD')}
-            className="px-2.5 py-1 rounded bg-amber-900/40 hover:bg-amber-800/50 text-amber-300 text-xs font-medium border border-amber-700 transition-colors"
-            title="Test SHA-256 Duplicate Collision"
-          >
-            + Duplicate
+            Upload File
           </button>
         </div>
       </div>
@@ -131,22 +109,22 @@ export default function DashboardView({
           <div className="text-2xl font-bold text-white font-mono">{stats?.totalTransfers ?? 0}</div>
           <div className="mt-1 text-[11px] text-slate-400 flex items-center gap-1">
             <span>Pass Rate:</span>
-            <span className="text-emerald-400 font-semibold">{stats?.successRatePercent ?? 100}%</span>
+            <span className="text-emerald-400 font-semibold">{stats?.successRatePercent ?? 0}%</span>
           </div>
         </div>
 
-        {/* Card 3: Validated S3 */}
+        {/* Card 3: Validated transfers */}
         <div 
           onClick={() => onNavigateTab('s3explorer')}
           className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-xl p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-emerald-500/5 group"
         >
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Validated Files</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Validated Transfers</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-2xl font-bold text-emerald-400 font-mono">{stats?.successfulTransfers ?? 0}</div>
           <div className="mt-1 text-[11px] text-slate-400 truncate">
-            S3: /validated/ prefix
+            Persisted successful transfer records
           </div>
         </div>
 
@@ -161,7 +139,7 @@ export default function DashboardView({
           </div>
           <div className="text-2xl font-bold text-rose-400 font-mono">{stats?.quarantinedFiles ?? 0}</div>
           <div className="mt-1 text-[11px] text-rose-400/80">
-            Isolated in S3
+            Isolated in storage
           </div>
         </div>
 
@@ -193,7 +171,7 @@ export default function DashboardView({
             {formatBytes(stats?.totalBytesTransferred)}
           </div>
           <div className="mt-1 text-[11px] text-slate-400">
-            S3 Standard Storage
+            Persisted transfer volume
           </div>
         </div>
       </div>
@@ -205,7 +183,7 @@ export default function DashboardView({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-semibold text-white">File Transfer Throughput & Quarantine Rates</h2>
-              <p className="text-xs text-slate-400">Real-time CloudWatch metric aggregation by hourly interval</p>
+              <p className="text-xs text-slate-400">Persisted transfers grouped by UTC hour</p>
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1 text-sky-400">
@@ -218,7 +196,7 @@ export default function DashboardView({
           </div>
 
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            {stats?.transfersByHour?.length ? <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats?.transfersByHour || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="transfersGrad" x1="0" y1="0" x2="0" y2="1">
@@ -240,7 +218,11 @@ export default function DashboardView({
                 <Area type="monotone" dataKey="transfers" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#transfersGrad)" name="Transfers" />
                 <Area type="monotone" dataKey="violations" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#violationsGrad)" name="Quarantines" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> : (
+              <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                No transfer activity recorded.
+              </div>
+            )}
           </div>
         </div>
 
@@ -252,7 +234,7 @@ export default function DashboardView({
           </div>
 
           <div className="h-52 relative flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            {stats?.totalTransfers ? <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieData}
@@ -271,11 +253,15 @@ export default function DashboardView({
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
                 />
               </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute text-center pointer-events-none">
-              <span className="text-xs text-slate-400">Total</span>
-              <div className="text-xl font-bold text-white font-mono">{stats?.totalTransfers || 0}</div>
-            </div>
+            </ResponsiveContainer> : (
+              <div className="text-xs text-slate-500">No validation results recorded.</div>
+            )}
+            {stats?.totalTransfers > 0 && (
+              <div className="absolute text-center pointer-events-none">
+                <span className="text-xs text-slate-400">Total</span>
+                <div className="text-xl font-bold text-white font-mono">{stats.totalTransfers}</div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-slate-800/80">
@@ -295,7 +281,7 @@ export default function DashboardView({
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-white">Recent File Transfers & Ingestion Stream</h2>
-            <p className="text-xs text-slate-400">DynamoDB tracked file transactions and Lambda verification status</p>
+            <p className="text-xs text-slate-400">Recent file transactions persisted by the application</p>
           </div>
           <button
             onClick={() => onNavigateTab('transfers')}
@@ -324,7 +310,7 @@ export default function DashboardView({
               {recentTransfers?.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="py-8 text-center text-slate-500">
-                    No transfers logged yet. Use the Quick Test buttons above to ingest sample files.
+                    No transfers recorded yet. Upload a file to create a transfer record.
                   </td>
                 </tr>
               ) : (

@@ -5,6 +5,7 @@ import com.aws.partner.fileexchange.model.S3ObjectInfo;
 import com.aws.partner.fileexchange.repository.PartnerRepository;
 import com.aws.partner.fileexchange.service.StorageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/partners")
@@ -43,30 +45,40 @@ public class PartnerController {
         if (partner.getName() == null || partner.getName().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+        partner.setName(partner.getName().trim());
         if (partner.getPartnerId() == null || partner.getPartnerId().isBlank()) {
-            String slug = partner.getName().replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
-            partner.setPartnerId("PRT-" + (slug.length() > 8 ? slug.substring(0, 8) : slug));
+            partner.setPartnerId("PRT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        } else {
+            partner.setPartnerId(partner.getPartnerId().trim());
+        }
+        if (partnerRepository.existsById(partner.getPartnerId())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+        if (partner.getAccessLevel() == null || !List.of("READ_ONLY", "READ_WRITE", "ADMIN", "ENCRYPTED_ONLY")
+                .contains(partner.getAccessLevel().trim().toUpperCase())) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (partner.getMaxFileSizeMb() <= 0
+                || partner.getAllowedFileTypes() == null
+                || partner.getAllowedFileTypes().isEmpty()) {
+            return ResponseEntity.badRequest().build();
         }
         if (partner.getStatus() == null) {
             partner.setStatus("ACTIVE");
+        } else if (!isValidStatus(partner.getStatus())) {
+            return ResponseEntity.badRequest().build();
+        } else {
+            partner.setStatus(partner.getStatus().trim().toUpperCase());
         }
-        if (partner.getAccessLevel() == null) {
-            partner.setAccessLevel("READ_WRITE");
-        }
-        if (partner.getMaxFileSizeMb() <= 0) {
-            partner.setMaxFileSizeMb(25);
-        }
-        if (partner.getAllowedFileTypes() == null || partner.getAllowedFileTypes().isEmpty()) {
-            partner.setAllowedFileTypes(List.of(".csv", ".json", ".xml", ".pdf"));
-        }
+        partner.setAccessLevel(partner.getAccessLevel().trim().toUpperCase());
         partner.setS3HomePrefix("partner/" + partner.getPartnerId() + "/");
-        if (partner.getSftpUsername() == null) {
-            partner.setSftpUsername("sftp-" + partner.getPartnerId().toLowerCase());
-        }
-        partner.setCreatedAt(Instant.now().toString());
+        String now = Instant.now().toString();
+        partner.setTotalTransfers(0);
+        partner.setCreatedAt(now);
+        partner.setUpdatedAt(now);
 
         Partner saved = partnerRepository.save(partner);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{partnerId}")
@@ -80,11 +92,15 @@ public class PartnerController {
         if (updated.getCompany() != null) p.setCompany(updated.getCompany());
         if (updated.getContactEmail() != null) p.setContactEmail(updated.getContactEmail());
         if (updated.getAccessLevel() != null) p.setAccessLevel(updated.getAccessLevel());
-        if (updated.getStatus() != null) p.setStatus(updated.getStatus());
+        if (updated.getStatus() != null) {
+            if (!isValidStatus(updated.getStatus())) return ResponseEntity.badRequest().build();
+            p.setStatus(updated.getStatus().trim().toUpperCase());
+        }
         if (updated.getAllowedFileTypes() != null) p.setAllowedFileTypes(updated.getAllowedFileTypes());
         if (updated.getMaxFileSizeMb() > 0) p.setMaxFileSizeMb(updated.getMaxFileSizeMb());
         if (updated.getIpWhitelist() != null) p.setIpWhitelist(updated.getIpWhitelist());
         if (updated.getPgpKeyFingerprint() != null) p.setPgpKeyFingerprint(updated.getPgpKeyFingerprint());
+        p.setUpdatedAt(Instant.now().toString());
 
         Partner saved = partnerRepository.save(p);
         return ResponseEntity.ok(saved);
@@ -92,15 +108,16 @@ public class PartnerController {
 
     @PatchMapping("/{partnerId}/status")
     public ResponseEntity<Partner> updateStatus(@PathVariable String partnerId, @RequestBody Map<String, String> body) {
-        String newStatus = body.get("status");
-        if (newStatus == null || (!newStatus.equalsIgnoreCase("ACTIVE") && !newStatus.equalsIgnoreCase("SUSPENDED"))) {
+        String newStatus = body == null ? null : body.get("status");
+        if (!isValidStatus(newStatus)) {
             return ResponseEntity.badRequest().build();
         }
         Optional<Partner> p = partnerRepository.findById(partnerId);
         if (p.isEmpty()) return ResponseEntity.notFound().build();
 
         Partner partner = p.get();
-        partner.setStatus(newStatus.toUpperCase());
+        partner.setStatus(newStatus.trim().toUpperCase());
+        partner.setUpdatedAt(Instant.now().toString());
         partnerRepository.save(partner);
         return ResponseEntity.ok(partner);
     }
@@ -108,5 +125,10 @@ public class PartnerController {
     @GetMapping("/{partnerId}/files")
     public ResponseEntity<List<S3ObjectInfo>> getPartnerFiles(@PathVariable String partnerId) {
         return ResponseEntity.ok(storageService.listByPartner(partnerId));
+    }
+
+    private boolean isValidStatus(String status) {
+        return status != null
+                && ("ACTIVE".equalsIgnoreCase(status.trim()) || "SUSPENDED".equalsIgnoreCase(status.trim()));
     }
 }

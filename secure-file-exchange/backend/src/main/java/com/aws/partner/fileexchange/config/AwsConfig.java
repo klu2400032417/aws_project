@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 @Configuration
@@ -33,24 +32,8 @@ public class AwsConfig {
                     .credentialsProvider(credentialsProvider)
                     .build();
         } catch (Exception e) {
-            log.warn("AWS Credentials not available ({}) -> Running in High-Fidelity Local Simulation mode for S3.", e.getMessage());
+            log.info("AWS credentials are unavailable ({}); configured file storage will use the local persistent directory.", e.getMessage());
             awsCredentialsAvailable = false;
-            return null;
-        }
-    }
-
-    @Bean
-    public DynamoDbClient dynamoDbClient() {
-        if (!awsCredentialsAvailable) {
-            return null;
-        }
-        try {
-            return DynamoDbClient.builder()
-                    .region(Region.of(awsRegion))
-                    .credentialsProvider(DefaultCredentialsProvider.create())
-                    .build();
-        } catch (Exception e) {
-            log.warn("DynamoDB client initialization failed: {}", e.getMessage());
             return null;
         }
     }

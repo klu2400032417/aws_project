@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class SystemStatus {
     private boolean awsConnected;
-    private String executionMode; // "AWS_HYBRID" or "HIGH_FIDELITY_SIMULATION"
+    private String executionMode;
     private String region;
     private String s3Bucket;
     private boolean s3Ready;

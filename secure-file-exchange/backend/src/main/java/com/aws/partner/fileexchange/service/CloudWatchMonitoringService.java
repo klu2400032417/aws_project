@@ -22,14 +22,17 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 public class CloudWatchMonitoringService {
     private static final Logger log = LoggerFactory.getLogger(CloudWatchMonitoringService.class);
 
-    @Value("${aws.cloudwatch.namespace:SecureFileExchange/Production}")
+    @Value("${aws.cloudwatch.namespace:SecureFileExchange}")
     private String namespace;
+
+    @Value("${app.environment:local}")
+    private String environment;
 
     private final CloudWatchClient cloudWatchClient;
     private final AwsConfig awsConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Circular buffer of recent CloudWatch structured logs (for live UI streaming)
+    // Recent backend metric activity shown in the UI.
     private final Deque<CloudWatchLogRecord> liveLogBuffer = new ConcurrentLinkedDeque<>();
     private static final int MAX_LIVE_LOGS = 150;
 
@@ -65,7 +68,7 @@ public class CloudWatchMonitoringService {
 
         Map<String, Object> dimensions = new HashMap<>(extraDimensions != null ? extraDimensions : Collections.emptyMap());
         dimensions.put("PartnerId", partnerId != null ? partnerId : "GLOBAL");
-        dimensions.put("Environment", "AWS-Learner-Lab");
+        dimensions.put("Environment", environment);
 
         Map<String, Object> metrics = Map.of(metricName, value);
 
@@ -86,7 +89,7 @@ public class CloudWatchMonitoringService {
             String jsonLog = objectMapper.writeValueAsString(emfPayload);
             log.info("[CloudWatch-EMF] {}", jsonLog);
         } catch (Exception e) {
-            log.info("[CloudWatch-EMF] Metric: {} = {} {}", metricName, value, unit);
+            log.warn("Unable to serialize CloudWatch metric {} for partner {}", metricName, partnerId, e);
         }
 
         // Store into UI log buffer
@@ -94,7 +97,7 @@ public class CloudWatchMonitoringService {
                 timestamp,
                 metricName.contains("Quarantined") || metricName.contains("Violation") ? "WARN" : "INFO",
                 "com.aws.partner.fileexchange.CloudWatchMonitoringService",
-                String.format("Emitted CloudWatch Metric [%s: %s %s] for Partner: %s", metricName, value, unit, partnerId),
+                String.format("Recorded metric [%s: %s %s] for partner %s", metricName, value, unit, partnerId),
                 metricName,
                 partnerId,
                 null,
@@ -117,7 +120,7 @@ public class CloudWatchMonitoringService {
                         .timestamp(Instant.now())
                         .dimensions(
                                 Dimension.builder().name("PartnerId").value(partnerId != null ? partnerId : "GLOBAL").build(),
-                                Dimension.builder().name("Environment").value("AWS-Learner-Lab").build()
+                                Dimension.builder().name("Environment").value(environment).build()
                         )
                         .build();
 
@@ -128,12 +131,16 @@ public class CloudWatchMonitoringService {
 
                 cloudWatchClient.putMetricData(request);
             } catch (Exception e) {
-                log.trace("Direct CloudWatch putMetricData call skipped: {}", e.getMessage());
+                log.warn("Unable to publish CloudWatch metric {} for partner {}", metricName, partnerId, e);
             }
         }
     }
 
     public List<CloudWatchLogRecord> getRecentLogs(int limit) {
         return liveLogBuffer.stream().limit(limit).toList();
+    }
+
+    public boolean isCloudWatchEnabled() {
+        return cloudWatchClient != null && awsConfig.isAwsCredentialsAvailable();
     }
 }

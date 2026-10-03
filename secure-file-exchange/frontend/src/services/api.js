@@ -43,7 +43,7 @@ export const api = {
   },
 
   async getPartner(partnerId) {
-    const res = await fetch(`${API_BASE}/partners/${partnerId}`);
+    const res = await fetch(`${API_BASE}/partners/${encodeURIComponent(partnerId)}`);
     if (!res.ok) throw new Error('Failed to fetch partner');
     return res.json();
   },
@@ -59,7 +59,7 @@ export const api = {
   },
 
   async updatePartnerStatus(partnerId, status) {
-    const res = await fetch(`${API_BASE}/partners/${partnerId}/status`, {
+    const res = await fetch(`${API_BASE}/partners/${encodeURIComponent(partnerId)}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -80,16 +80,6 @@ export const api = {
       body: formData,
     });
     if (!res.ok) throw new Error('Upload failed');
-    return res.json();
-  },
-
-  async runQuickTest(testType, partnerId) {
-    const res = await fetch(`${API_BASE}/files/quick-test`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ testType, partnerId }),
-    });
-    if (!res.ok) throw new Error('Quick test payload execution failed');
     return res.json();
   },
 

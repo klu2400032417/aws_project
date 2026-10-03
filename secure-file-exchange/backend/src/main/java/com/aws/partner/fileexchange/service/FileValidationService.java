@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.*;
@@ -54,35 +53,30 @@ public class FileValidationService {
         String timestamp = Instant.now().toString();
 
         FileTransfer transfer = new FileTransfer();
-        transfer.setTransferId("TX-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        transfer.setTransferId(UUID.randomUUID().toString());
         transfer.setPartnerId(partnerId);
         transfer.setFileName(originalFileName);
         transfer.setFileSize(fileBytes != null ? fileBytes.length : 0);
         transfer.setDirection(direction != null ? direction : "INCOMING");
         transfer.setCreatedAt(timestamp);
         transfer.setMimeType(contentType != null ? contentType : "application/octet-stream");
-        transfer.setUploadedBy("PartnerPortalUser");
+        transfer.setUploadedBy(null);
         transfer.setS3Bucket(storageService.getBucketName());
-        transfer.setProductionConceptNote("Incoming exchange channeled via AWS Transfer Family SFTP Endpoint -> S3 Ingestion Bucket");
+
+        Optional<Partner> partnerOpt = partnerRepository.findById(partnerId);
+        if (partnerOpt.isEmpty()) {
+            throw new IllegalArgumentException("Partner is not registered: " + partnerId);
+        }
+        Partner partner = partnerOpt.get();
+        transfer.setPartnerName(partner.getName());
 
         // 1. Calculate SHA-256 Checksum
         String sha256 = calculateSha256(fileBytes);
         transfer.setSha256Hash(sha256);
 
-        // Store first in incoming prefix: partner/{partnerId}/incoming/
-        storageService.storeIncoming(partnerId, originalFileName, fileBytes, contentType, sha256);
-        transfer.setIncomingS3Key(storageService.buildKey(partnerId, "incoming", originalFileName));
-
         cloudWatchService.recordFileReceived(partnerId, originalFileName, fileBytes != null ? fileBytes.length : 0);
 
-        // 2. Validate Partner Existence & Status
-        Optional<Partner> partnerOpt = partnerRepository.findById(partnerId);
-        if (partnerOpt.isEmpty()) {
-            return failTransfer(transfer, "PARTNER_NOT_FOUND", "Partner ID " + partnerId + " is not registered in system", fileBytes, clientIp, startTime);
-        }
-        Partner partner = partnerOpt.get();
-        transfer.setPartnerName(partner.getName());
-
+        // 2. Validate Partner Status
         if ("SUSPENDED".equalsIgnoreCase(partner.getStatus())) {
             // Suspended partner cannot exchange files
             securityEventRepository.save(new SecurityEvent(
@@ -151,20 +145,20 @@ public class FileValidationService {
         }
 
         // 7. SHA-256 Duplicate File Detection
-        Optional<FileTransfer> existingDuplicate = transferRepository.findBySha256Hash(sha256);
-        if (existingDuplicate.isPresent()) {
-            FileTransfer dup = existingDuplicate.get();
+        List<FileTransfer> existingDuplicates = transferRepository.findAllBySha256HashIgnoreCase(sha256);
+        if (!existingDuplicates.isEmpty()) {
+            FileTransfer dup = existingDuplicates.get(0);
             // Flag as DUPLICATE
             securityEventRepository.save(new SecurityEvent(
                     null, timestamp, "WARNING", "DUPLICATE_FILE_DETECTED", partnerId, partner.getName(),
                     originalFileName, String.format("Identical SHA-256 payload detected (%s). Matches transfer %s ('%s')", sha256.substring(0, 12) + "...", dup.getTransferId(), dup.getFileName()),
-                    sha256, "Marked DUPLICATE; cataloged in DynamoDB security audit", clientIp
+                    sha256, "Marked DUPLICATE; recorded in the security audit database", clientIp
             ));
             cloudWatchService.recordDuplicateRejected(partnerId, originalFileName, sha256);
 
             // Store in quarantine with duplicate tag
-            storageService.storeQuarantine(partnerId, originalFileName, fileBytes, contentType, sha256, "Duplicate SHA-256 hash");
-            String quarantineKey = storageService.buildKey(partnerId, "quarantine", originalFileName);
+            storageService.storeQuarantine(partnerId, originalFileName, transfer.getTransferId(), fileBytes, contentType, sha256);
+            String quarantineKey = storageService.buildKey(partnerId, "quarantine", originalFileName, transfer.getTransferId());
 
             ValidationResult vr = new ValidationResult(false, "DUPLICATE",
                     String.format("Duplicate payload detected. Matches existing transfer %s ('%s') with identical SHA-256 checksum.", dup.getTransferId(), dup.getFileName()),
@@ -185,16 +179,22 @@ public class FileValidationService {
         }
 
         // 8. Passed All Validations -> Move to Validated prefix: partner/{partnerId}/validated/
-        storageService.storeValidated(partnerId, originalFileName, fileBytes, contentType, sha256);
-        String validatedKey = storageService.buildKey(partnerId, "validated", originalFileName);
+        String validatedKey;
+        if ("OUTGOING".equalsIgnoreCase(direction)) {
+            storageService.storeOutgoing(partnerId, originalFileName, transfer.getTransferId(), fileBytes, contentType, sha256);
+            validatedKey = storageService.buildKey(partnerId, "outgoing", originalFileName, transfer.getTransferId());
+        } else {
+            storageService.storeValidated(partnerId, originalFileName, transfer.getTransferId(), fileBytes, contentType, sha256);
+            validatedKey = storageService.buildKey(partnerId, "validated", originalFileName, transfer.getTransferId());
+        }
 
         ValidationResult vr = new ValidationResult(true, "VALIDATED",
-                "Successfully passed all security scans, policy checks, and SHA-256 cryptographic verification.",
+                "Passed partner status, filename, extension, size, and duplicate checks; SHA-256 calculated.",
                 sha256);
         vr.setValidatedS3Key(validatedKey);
         vr.setProcessingTimeMs(System.currentTimeMillis() - startTime);
         vr.setTimestamp(Instant.now().toString());
-        vr.setSecurityFlags(List.of("ANTIVIRUS_CLEAN", "WHITELIST_VERIFIED", "INTEGRITY_CONFIRMED"));
+        vr.setSecurityFlags(List.of("PARTNER_ACTIVE", "FILENAME_CHECKED", "FILE_TYPE_CHECKED", "SIZE_CHECKED", "SHA256_CALCULATED"));
 
         transfer.setStatus("VALIDATED");
         transfer.setS3Key(validatedKey);
@@ -210,8 +210,8 @@ public class FileValidationService {
     }
 
     private FileTransfer quarantineTransfer(FileTransfer transfer, String reason, byte[] fileBytes, long startTime) {
-        String quarantineKey = storageService.buildKey(transfer.getPartnerId(), "quarantine", transfer.getFileName());
-        storageService.storeQuarantine(transfer.getPartnerId(), transfer.getFileName(), fileBytes, transfer.getMimeType(), transfer.getSha256Hash(), reason);
+        String quarantineKey = storageService.buildKey(transfer.getPartnerId(), "quarantine", transfer.getFileName(), transfer.getTransferId());
+        storageService.storeQuarantine(transfer.getPartnerId(), transfer.getFileName(), transfer.getTransferId(), fileBytes, transfer.getMimeType(), transfer.getSha256Hash());
 
         ValidationResult vr = new ValidationResult(false, "QUARANTINED", reason, transfer.getSha256Hash());
         vr.setQuarantinedS3Key(quarantineKey);
@@ -232,19 +232,6 @@ public class FileValidationService {
         return transfer;
     }
 
-    private FileTransfer failTransfer(FileTransfer transfer, String errorCode, String reason, byte[] fileBytes, String clientIp, long startTime) {
-        ValidationResult vr = new ValidationResult(false, "FAILED", reason, transfer.getSha256Hash());
-        vr.setProcessingTimeMs(System.currentTimeMillis() - startTime);
-        vr.setTimestamp(Instant.now().toString());
-
-        transfer.setStatus("FAILED");
-        transfer.setValidationResult(vr);
-        transfer.setCompletedAt(Instant.now().toString());
-
-        transferRepository.save(transfer);
-        return transfer;
-    }
-
     public static String calculateSha256(byte[] data) {
         if (data == null || data.length == 0) {
             return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // Empty hash
@@ -259,8 +246,8 @@ public class FileValidationService {
                 hexString.append(hex);
             }
             return hexString.toString();
-        } catch (Exception e) {
-            return UUID.randomUUID().toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
         }
     }
 }

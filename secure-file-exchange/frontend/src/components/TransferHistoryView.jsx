@@ -70,9 +70,9 @@ export default function TransferHistoryView({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Transfer History & DynamoDB Audit Catalog</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">Transfer History & Audit Catalog</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Immutable transaction records indexed in Amazon DynamoDB with cryptographic validation forensics.
+            Persisted transaction records with cryptographic validation details.
           </p>
         </div>
 
@@ -164,7 +164,7 @@ export default function TransferHistoryView({
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="py-8 text-center text-slate-500">
-                    No transactions match current filters.
+                    {transfers.length === 0 ? 'No transfers have been recorded yet.' : 'No transactions match current filters.'}
                   </td>
                 </tr>
               ) : (

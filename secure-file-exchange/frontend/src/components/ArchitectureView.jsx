@@ -310,9 +310,9 @@ def lambda_handler(event, context):
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white tracking-tight">System Architecture & SFTP Integration Blueprint</h1>
+        <h1 className="text-xl font-bold text-white tracking-tight">System Architecture & AWS Infrastructure Blueprint</h1>
         <p className="text-xs text-slate-400 mt-0.5">
-          Detailed mapping between the Target Production Architecture and the Achieved AWS Learner Lab Implementation.
+        Current application services and the separate optional AWS infrastructure design.
         </p>
       </div>
 
@@ -324,34 +324,34 @@ def lambda_handler(event, context):
           </div>
           <div>
             <h2 className="text-sm font-bold text-amber-300">
-              AWS Learner Lab Environment & Presentation Transparency Notice
+              Runtime and Optional AWS Services
             </h2>
             <p className="text-xs text-slate-300 mt-0.5">
-              Strictly abiding by project constraints: <strong>No fake AWS Transfer Family endpoints.</strong>
+              The application reports only services that are configured and used.
             </p>
           </div>
         </div>
 
         <p className="text-xs text-slate-300 leading-relaxed">
-          In typical student/academic AWS Learner Lab accounts, the <strong>AWS Transfer Family service is restricted or disabled</strong> due to IAM boundary constraints and VPC endpoint pricing. As specified in project requirements:
+          AWS Transfer Family is not configured by the application. The REST backend validates uploads and persists partner, transfer, and security records in the relational database.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
           <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
             <span className="font-semibold text-amber-400 block mb-1">
-              Production Architecture Concept (From Project PPT):
+              Optional AWS Pipeline (Terraform):
             </span>
             <p className="text-slate-400 text-[11px] leading-relaxed">
-              <strong className="text-slate-200">Transfer Family → S3 → IAM → CloudWatch.</strong> External partners connect via SFTP/FTPS authenticated against IAM/Active Directory, dropping files into S3 home directory prefixes.
+              <strong className="text-slate-200">S3 → Lambda → DynamoDB → CloudWatch.</strong> The separate Terraform configuration defines this AWS event-processing pipeline; deploy it separately to activate it.
             </p>
           </div>
 
           <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
             <span className="font-semibold text-emerald-400 block mb-1">
-              Achieved Implementation in this Platform:
+              Current Application Runtime:
             </span>
             <p className="text-slate-400 text-[11px] leading-relaxed">
-              <strong className="text-slate-200">React + Spring Boot + S3 + Lambda-Grade Validation + DynamoDB + CloudWatch.</strong> Uses direct S3 ingestion with identical partition structure (<code className="text-sky-300">partner/{'{id}'}/prefix</code>), SHA-256 duplicate detection, quarantine isolation, and EMF logging.
+              <strong className="text-slate-200">React + Spring Boot + relational database + configured S3 or local storage.</strong> The backend validates manual uploads, calculates SHA-256, detects duplicates, and persists transfer and security audit records. CloudWatch metrics are optional when AWS credentials are configured.
             </p>
           </div>
         </div>
@@ -414,15 +414,15 @@ def lambda_handler(event, context):
           </div>
         </div>
 
-        {/* Diagram 2: Achieved Learner Lab Architecture */}
+        {/* Diagram 2: Current application runtime */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white">Achieved Lab Implementation</h3>
+              <h3 className="text-sm font-bold text-white">Current Application Runtime</h3>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
-              ACTIVE & RUNNABLE
+              ACTIVE
             </span>
           </div>
 
@@ -430,7 +430,7 @@ def lambda_handler(event, context):
             <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-sky-400 font-mono font-bold block text-[11px]">1. React Enterprise Admin Portal</span>
-                <span className="text-slate-400 text-[11px]">File upload, live test matrix, S3 browser, audit logs</span>
+                <span className="text-slate-400 text-[11px]">Partner management, file upload, storage browser, audit views</span>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-600" />
             </div>
@@ -438,15 +438,15 @@ def lambda_handler(event, context):
             <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-800/60 flex items-center justify-between">
               <div>
                 <span className="text-emerald-400 font-mono font-bold block text-[11px]">2. Spring Boot REST Ingestion Bridge</span>
-                <span className="text-slate-300 text-[11px]">Direct S3 / multipart ingestion simulating SFTP drops</span>
+                <span className="text-slate-300 text-[11px]">Multipart uploads validated by backend services</span>
               </div>
               <ArrowRight className="w-4 h-4 text-emerald-500/60" />
             </div>
 
             <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-sky-400 font-mono font-bold block text-[11px]">3. Amazon S3 Prefix Partitions</span>
-                <span className="text-slate-400 text-[11px]">Scoped keys: /incoming, /validated, /quarantine, /outgoing</span>
+                <span className="text-sky-400 font-mono font-bold block text-[11px]">3. Relational Database & File Storage</span>
+                <span className="text-slate-400 text-[11px]">Partners, transfers, and audit records; files stored in configured S3 or local storage</span>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-600" />
             </div>
@@ -454,15 +454,15 @@ def lambda_handler(event, context):
             <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-indigo-400 font-mono font-bold block text-[11px]">4. Automated Validation Engine</span>
-                <span className="text-slate-400 text-[11px]">Identical SHA-256 hash checks, duplicate alerts, malware filter</span>
+                <span className="text-slate-400 text-[11px]">SHA-256 duplicate checks, extension and partner policy validation</span>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-600" />
             </div>
 
             <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-purple-400 font-mono font-bold block text-[11px]">5. DynamoDB & CloudWatch EMF</span>
-                <span className="text-slate-400 text-[11px]">Real-time EMF structured logging and metric streaming</span>
+                <span className="text-purple-400 font-mono font-bold block text-[11px]">5. Optional CloudWatch Metrics</span>
+                <span className="text-slate-400 text-[11px]">Published when AWS credentials and the CloudWatch client are available</span>
               </div>
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             </div>

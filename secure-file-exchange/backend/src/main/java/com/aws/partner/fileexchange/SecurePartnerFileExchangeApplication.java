@@ -13,9 +13,8 @@ public class SecurePartnerFileExchangeApplication {
         SpringApplication.run(SecurePartnerFileExchangeApplication.class, args);
         log.info("================================================================================");
         log.info(" Secure Partner File Exchange Platform (Enterprise Edition)");
-        log.info(" Storage Architecture: Amazon S3 (partner/{partnerId}/[incoming|validated|quarantine|outgoing])");
-        log.info(" Production Transfer Family Gateway: Labelled as 'Planned Production Integration'");
-        log.info(" Active Ingestion: S3 Direct / REST Bridge + Lambda-Grade Validation + DynamoDB + CloudWatch");
+        log.info(" Storage Architecture: Configured Amazon S3 or local persistent storage");
+        log.info(" Active Ingestion: REST API + backend validation + relational database");
         log.info(" Backend running on: http://localhost:8080");
         log.info("================================================================================");
     }

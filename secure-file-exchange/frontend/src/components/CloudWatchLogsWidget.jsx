@@ -21,11 +21,11 @@ export default function CloudWatchLogsWidget({ logs, onClose, onRefresh }) {
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-sky-400" />
-          <span className="font-bold text-white text-xs">Amazon CloudWatch Live Metric & Audit Stream</span>
+          <span className="font-bold text-white text-xs">Backend Activity & Metrics</span>
           <span className="text-[10px] px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">
             EMF 1.0.0
           </span>
-          <span className="text-[10px] text-slate-500">Namespace: SecureFileExchange/Production</span>
+          <span className="text-[10px] text-slate-500">CloudWatch metrics publish when configured</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export default function CloudWatchLogsWidget({ logs, onClose, onRefresh }) {
 
       <div className="mt-3 max-h-56 overflow-y-auto space-y-2 pr-1 select-text">
         {filteredLogs.length === 0 ? (
-          <div className="text-slate-500 py-4 text-center">No logs matching filter. Trigger an exchange to generate CloudWatch EMF metrics.</div>
+          <div className="text-slate-500 py-4 text-center">No activity matches this filter. Upload a file to record backend activity.</div>
         ) : (
           filteredLogs.map((item, idx) => (
             <div

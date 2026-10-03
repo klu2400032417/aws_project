@@ -71,7 +71,7 @@ export default function Sidebar({ currentTab, setTab, stats, unreadSecurityCount
         </div>
         <div className="text-xs text-slate-300 flex items-center gap-1.5 font-medium">
           <Lock className="w-3.5 h-3.5 text-emerald-400" />
-          <span>S3 Policy Enforced</span>
+          <span>Partner Policies Enforced</span>
         </div>
       </div>
 
@@ -103,11 +103,11 @@ export default function Sidebar({ currentTab, setTab, stats, unreadSecurityCount
         })}
       </nav>
 
-      {/* S3 Partition Info Card */}
+      {/* Storage Prefix Info Card */}
       <div className="p-3 m-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px]">
         <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
-          <span>S3 Prefix Pattern</span>
-          <span className="text-[10px] text-emerald-400 font-mono">IAM Scoped</span>
+          <span>Storage Prefix Pattern</span>
+          <span className="text-[10px] text-emerald-400 font-mono">Partner Scoped</span>
         </div>
         <div className="font-mono text-[10px] text-slate-400 space-y-0.5">
           <div className="text-sky-400">partner/{'{id}'}/incoming/</div>
@@ -120,8 +120,8 @@ export default function Sidebar({ currentTab, setTab, stats, unreadSecurityCount
       {/* Footer Info */}
       <div className="p-3 border-t border-slate-800/80 text-[11px] text-slate-500">
         <div className="flex items-center justify-between">
-          <span>Lambda Engine v2.4</span>
-          <span>DynamoDB v2</span>
+          <span>Validation API</span>
+          <span>Relational DB</span>
         </div>
       </div>
     </aside>

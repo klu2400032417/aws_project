@@ -23,6 +23,7 @@ import { api } from '../services/api';
 export default function S3ExplorerView({ 
   s3Objects, 
   partners, 
+  bucketName,
   onRefresh, 
   onDeleteObject 
 }) {
@@ -80,16 +81,16 @@ export default function S3ExplorerView({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Amazon S3 Storage Hierarchy</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">File Storage Browser</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Hierarchical partner prefix browser enforcing IAM least-privilege scoping across incoming, validated, quarantine, and outgoing objects.
+            Browse persisted partner files across incoming, validated, quarantine, and outgoing storage prefixes.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="text-xs font-mono text-slate-400 px-2.5 py-1 rounded bg-slate-900 border border-slate-800 flex items-center gap-1.5">
             <Database className="w-3.5 h-3.5 text-sky-400" />
-            <span>s3://secure-partner-file-exchange-lab/</span>
+            <span>{bucketName ? `s3://${bucketName}/` : 'Local persistent storage'}</span>
           </div>
           <button
             onClick={onRefresh}
@@ -114,7 +115,7 @@ export default function S3ExplorerView({
               <span>/incoming/</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Target of SFTP upload. Triggers S3 ObjectCreated event notification to Lambda validator.
+              Optional external SFTP or S3 ingestion prefix for configured AWS workflows.
             </p>
           </div>
 
@@ -124,7 +125,7 @@ export default function S3ExplorerView({
               <span>/validated/</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Sanitized, virus-clean files with confirmed SHA-256 integrity, ready for downstream processing.
+              Files accepted by the application validation policy, ready for downstream processing.
             </p>
           </div>
 
@@ -217,7 +218,7 @@ export default function S3ExplorerView({
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="py-8 text-center text-slate-500">
-                    No S3 objects found matching active filters.
+                    {s3Objects.length === 0 ? 'No files stored yet.' : 'No S3 objects match the selected filters.'}
                   </td>
                 </tr>
               ) : (
@@ -243,7 +244,7 @@ export default function S3ExplorerView({
                       {formatBytes(obj.size)}
                     </td>
                     <td className="py-3 px-4 font-mono text-[10px] text-slate-400">
-                      {obj.storageClass || 'STANDARD'}
+                      {obj.storageClass || 'Unavailable'}
                     </td>
                     <td className="py-3 px-4 font-mono text-[10px] text-slate-400">
                       {obj.sha256Hash ? `${obj.sha256Hash.substring(0, 10)}...` : 'N/A'}
@@ -285,7 +286,7 @@ export default function S3ExplorerView({
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-sky-400" />
-                <h2 className="text-base font-bold text-white">S3 Object Attributes</h2>
+                <h2 className="text-base font-bold text-white">Stored File Attributes</h2>
               </div>
               <button
                 onClick={() => setSelectedObject(null)}
@@ -297,9 +298,9 @@ export default function S3ExplorerView({
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-slate-400">Full S3 URI:</span>
+                <span className="text-slate-400">Storage location:</span>
                 <div className="font-mono text-sky-400 bg-slate-950 p-2 rounded border border-slate-800 mt-1 break-all select-all">
-                  s3://{selectedObject.bucket}/{selectedObject.key}
+                  {selectedObject.bucket ? `s3://${selectedObject.bucket}/${selectedObject.key}` : selectedObject.key}
                 </div>
               </div>
 
@@ -317,8 +318,8 @@ export default function S3ExplorerView({
                   <div className="font-mono text-slate-200 mt-0.5">{formatBytes(selectedObject.size)}</div>
                 </div>
                 <div>
-                  <span className="text-slate-400">S3 ETag:</span>
-                  <div className="font-mono text-slate-300 mt-0.5">{selectedObject.eTag || 'STANDARD-ETAG'}</div>
+                  <span className="text-slate-400">ETag:</span>
+                  <div className="font-mono text-slate-300 mt-0.5">{selectedObject.eTag || 'Unavailable'}</div>
                 </div>
               </div>
 

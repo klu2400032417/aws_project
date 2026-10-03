@@ -25,22 +25,18 @@ spring:
 aws:
   region: ${AWS_REGION:us-east-1}
   s3:
-    bucket-name: ${S3_BUCKET_NAME:secure-partner-file-exchange-lab}
+    bucket-name: ${S3_BUCKET_NAME:}
     create-bucket-if-missing: true
-  dynamodb:
-    table-transfers: ${DYNAMO_TABLE_TRANSFERS:PartnerFileTransfers}
-    table-partners: ${DYNAMO_TABLE_PARTNERS:Partners}
-    table-events: ${DYNAMO_TABLE_EVENTS:SecurityEvents}
   cloudwatch:
-    namespace: ${CLOUDWATCH_NAMESPACE:SecureFileExchange/Production}
+    namespace: ${CLOUDWATCH_NAMESPACE:SecureFileExchange}
   transfer-family:
-    status: PRODUCTION_CONCEPT_ONLY
-    note: "AWS Transfer Family is restricted in AWS Learner Lab. Production architecture routes SFTP into S3. The active implementation uses direct S3 ingestion with identical Lambda validation."
+    status: OPTIONAL_NOT_CONFIGURED
+    note: "The application accepts REST uploads. Provision AWS Transfer Family separately if SFTP ingress is required."
 
 app:
+  environment: ${APP_ENV:local}
   storage:
-    local-root: "C:/Users/ASUS/.gemini/antigravity/scratch/secure-file-exchange/storage"
-    enable-local-disk-backup: true
+    local-root: "./data/storage"
   security:
     max-file-size-mb: 50
     restricted-extensions: [".exe", ".bat", ".cmd", ".sh", ".vbs", ".scr", ".dll", ".ps1", ".jar", ".app"]

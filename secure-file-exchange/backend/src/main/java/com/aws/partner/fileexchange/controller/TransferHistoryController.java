@@ -29,7 +29,7 @@ public class TransferHistoryController {
             @RequestParam(value = "direction", required = false) String direction,
             @RequestParam(value = "search", required = false) String search) {
 
-        List<FileTransfer> list = transferRepository.findAll();
+        List<FileTransfer> list = transferRepository.findAllByOrderByCreatedAtDesc();
 
         if (partnerId != null && !partnerId.isBlank()) {
             list = list.stream().filter(t -> partnerId.equalsIgnoreCase(t.getPartnerId())).collect(Collectors.toList());
@@ -62,14 +62,15 @@ public class TransferHistoryController {
 
     @GetMapping("/duplicate-check")
     public ResponseEntity<Map<String, Object>> checkDuplicate(@RequestParam("hash") String hash) {
-        Optional<FileTransfer> existing = transferRepository.findBySha256Hash(hash);
-        if (existing.isPresent()) {
+        List<FileTransfer> existingTransfers = transferRepository.findAllBySha256HashIgnoreCase(hash);
+        if (!existingTransfers.isEmpty()) {
+            FileTransfer existing = existingTransfers.get(0);
             return ResponseEntity.ok(Map.of(
                     "isDuplicate", true,
-                    "existingTransferId", existing.get().getTransferId(),
-                    "existingFileName", existing.get().getFileName(),
-                    "partnerId", existing.get().getPartnerId(),
-                    "createdAt", existing.get().getCreatedAt()
+                    "existingTransferId", existing.getTransferId(),
+                    "existingFileName", existing.getFileName(),
+                    "partnerId", existing.getPartnerId(),
+                    "createdAt", existing.getCreatedAt()
             ));
         }
         return ResponseEntity.ok(Map.of("isDuplicate", false));

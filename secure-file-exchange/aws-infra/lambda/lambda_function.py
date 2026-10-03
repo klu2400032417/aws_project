@@ -130,10 +130,11 @@ def lambda_handler(event, context):
                 "Timestamp": int(datetime.utcnow().timestamp() * 1000),
                 "CloudWatchMetrics": [{
                     "Namespace": CLOUDWATCH_NAMESPACE,
-                    "Dimensions": [["PartnerId", "Status"]],
+                    "Dimensions": [["PartnerId", "Status"], ["Status"]],
                     "Metrics": [
                         {"Name": "FilesProcessed", "Unit": "Count"},
-                        {"Name": "BytesTransferred", "Unit": "Bytes"}
+                        {"Name": "BytesTransferred", "Unit": "Bytes"},
+                        {"Name": "ValidationQuarantined", "Unit": "Count"}
                     ]
                 }]
             },
@@ -141,6 +142,7 @@ def lambda_handler(event, context):
             "Status": status,
             "FilesProcessed": 1,
             "BytesTransferred": file_size,
+            "ValidationQuarantined": 1 if status == 'QUARANTINED' else 0,
             "TransferId": transfer_id,
             "SHA256": sha256_hash
         }

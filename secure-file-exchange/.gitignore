@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+
+.aws/
+**/.aws/
+
+credentials
+**/credentials
+
+target/
+node_modules/
+*.log
+
+.idea/
+.vscode/settings.json

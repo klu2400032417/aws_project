@@ -33,7 +33,7 @@ export default function SecurityView({
 
   const criticalCount = securityEvents.filter(e => e.severity === 'CRITICAL').length;
   const highCount = securityEvents.filter(e => e.severity === 'HIGH').length;
-  const warningCount = securityEvents.filter(e => e.severity === 'WARNING').length;
+  const duplicateCount = securityEvents.filter(e => e.eventType === 'DUPLICATE_FILE_DETECTED').length;
 
   const filteredEvents = securityEvents.filter(e => {
     if (severityFilter !== 'ALL' && e.severity !== severityFilter) return false;
@@ -116,7 +116,7 @@ export default function SecurityView({
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Duplicate Payloads</span>
-            <div className="text-2xl font-bold text-amber-400 font-mono mt-1">{warningCount}</div>
+            <div className="text-2xl font-bold text-amber-400 font-mono mt-1">{duplicateCount}</div>
             <span className="text-[11px] text-slate-500">SHA-256 Collision Rejections</span>
           </div>
           <div className="p-3 rounded-xl bg-amber-950/60 text-amber-400 border border-amber-900">
@@ -126,9 +126,9 @@ export default function SecurityView({
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Isolated in S3</span>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Quarantined files</span>
             <div className="text-2xl font-bold text-white font-mono mt-1">{quarantinedTransfers?.length || 0}</div>
-            <span className="text-[11px] text-rose-400 font-mono">/quarantine/ partition</span>
+            <span className="text-[11px] text-rose-400 font-mono">quarantine partition</span>
           </div>
           <div className="p-3 rounded-xl bg-slate-800 text-sky-400 border border-slate-700">
             <FolderLock className="w-6 h-6" />
@@ -302,7 +302,7 @@ export default function SecurityView({
                   {quarantinedTransfers?.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="py-8 text-center text-slate-500">
-                        No quarantined files found. All incoming transfers are clean.
+                        No quarantined transfers have been recorded.
                       </td>
                     </tr>
                   ) : (

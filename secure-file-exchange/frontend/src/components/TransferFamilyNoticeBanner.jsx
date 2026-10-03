@@ -9,8 +9,8 @@ export default function TransferFamilyNoticeBanner({ onOpenArchitecture }) {
       <div className="bg-amber-950/40 border-b border-amber-800/40 px-4 py-1.5 flex items-center justify-between text-xs text-amber-300">
         <div className="flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-          <span className="font-semibold">Learner Lab Notice:</span>
-          <span>AWS Transfer Family labeled as Planned Production Integration (Direct S3 + Lambda + DynamoDB active).</span>
+          <span className="font-semibold">Runtime Notice:</span>
+          <span>File transfers use the REST API, relational database, and configured file storage.</span>
         </div>
         <button
           onClick={() => setDismissed(false)}
@@ -32,18 +32,14 @@ export default function TransferFamilyNoticeBanner({ onOpenArchitecture }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                AWS Learner Lab Environment
+                Runtime Configuration
               </span>
               <span className="text-xs font-medium text-slate-400">
-                Production Concept vs Achieved Architecture
+                Runtime and Optional AWS Architecture
               </span>
             </div>
             <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-              <strong className="text-amber-300 font-semibold">AWS Transfer Family Constraint:</strong> Real SFTP server endpoints are restricted in AWS Learner Lab. This platform directly implements the production core: 
-              <span className="text-sky-300 font-mono text-[11px] mx-1">S3 (partner/{'{id}'}/prefix)</span> → 
-              <span className="text-emerald-300 font-mono text-[11px] mx-1">Lambda Validation (SHA-256 / Quarantine)</span> → 
-              <span className="text-purple-300 font-mono text-[11px] mx-1">DynamoDB Audit</span> → 
-              <span className="text-cyan-300 font-mono text-[11px] mx-1">CloudWatch EMF</span>. Transfer Family is honestly documented as the intended production ingress.
+              <strong className="text-amber-300 font-semibold">Current application flow:</strong> File uploads are validated by the backend, transfer and security records are stored in the relational database, and file bytes are persisted to configured S3 or local storage. AWS Transfer Family and the separate Terraform Lambda/DynamoDB pipeline are optional infrastructure, not active application services.
             </p>
           </div>
         </div>

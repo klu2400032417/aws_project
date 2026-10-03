@@ -34,14 +34,14 @@ public class SecurityController {
     public ResponseEntity<List<SecurityEvent>> getSecurityEvents(
             @RequestParam(value = "severity", required = false) String severity) {
         if (severity != null && !severity.isBlank()) {
-            return ResponseEntity.ok(securityEventRepository.findBySeverity(severity));
+            return ResponseEntity.ok(securityEventRepository.findBySeverityIgnoreCaseOrderByTimestampDesc(severity));
         }
-        return ResponseEntity.ok(securityEventRepository.findAll());
+        return ResponseEntity.ok(securityEventRepository.findAllByOrderByTimestampDesc());
     }
 
     @GetMapping("/quarantined")
     public ResponseEntity<List<FileTransfer>> getQuarantinedTransfers() {
-        return ResponseEntity.ok(fileTransferRepository.findByStatus("QUARANTINED"));
+        return ResponseEntity.ok(fileTransferRepository.findByStatusIgnoreCaseOrderByCreatedAtDesc("QUARANTINED"));
     }
 
     @GetMapping("/quarantined-s3")
@@ -51,7 +51,13 @@ public class SecurityController {
 
     @PostMapping("/events/{eventId}/resolve")
     public ResponseEntity<Map<String, Object>> resolveSecurityEvent(@PathVariable String eventId) {
-        boolean resolved = securityEventRepository.markResolved(eventId);
+        boolean resolved = securityEventRepository.findById(eventId)
+                .map(event -> {
+                    event.setResolved(true);
+                    securityEventRepository.save(event);
+                    return true;
+                })
+                .orElse(false);
         return ResponseEntity.ok(Map.of("eventId", eventId, "resolved", resolved));
     }
 }

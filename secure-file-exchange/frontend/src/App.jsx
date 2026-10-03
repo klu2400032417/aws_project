@@ -19,13 +19,14 @@ export default function App() {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentTransfers, setRecentTransfers] = useState([]);
   const [partners, setPartners] = useState([]);
+  const [partnersError, setPartnersError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [s3Objects, setS3Objects] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [securityEvents, setSecurityEvents] = useState([]);
   const [cloudWatchLogs, setCloudWatchLogs] = useState([]);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [showLogsWidget, setShowLogsWidget] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // Fetch all live data
   const loadData = useCallback(async () => {
@@ -44,15 +45,32 @@ export default function App() {
       if (status.status === 'fulfilled') setSystemStatus(status.value);
       if (stats.status === 'fulfilled') setDashboardStats(stats.value);
       if (recent.status === 'fulfilled') setRecentTransfers(recent.value);
-      if (parts.status === 'fulfilled') setPartners(parts.value);
+      if (parts.status === 'fulfilled') {
+        setPartners(parts.value);
+        setPartnersError('');
+      } else {
+        setPartnersError('Unable to load partners from the backend. Please try refreshing.');
+      }
       if (objs.status === 'fulfilled') setS3Objects(objs.value);
       if (txs.status === 'fulfilled') setTransfers(txs.value);
       if (sec.status === 'fulfilled') setSecurityEvents(sec.value);
       if (logs.status === 'fulfilled') setCloudWatchLogs(logs.value);
+      const failedSources = [
+        ['system status', status],
+        ['dashboard statistics', stats],
+        ['recent transfers', recent],
+        ['partners', parts],
+        ['storage objects', objs],
+        ['transfers', txs],
+        ['security events', sec],
+        ['CloudWatch logs', logs]
+      ].filter(([, result]) => result.status === 'rejected').map(([name]) => name);
+      setLoadError(failedSources.length
+        ? `Unable to load: ${failedSources.join(', ')}. Refresh or check backend/AWS availability.`
+        : '');
     } catch (err) {
       console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
+      setLoadError('Unable to load backend data. Refresh or check backend/AWS availability.');
     }
   }, []);
 
@@ -66,12 +84,6 @@ export default function App() {
   // Handlers
   const handleUploadFile = async (file, partnerId, direction) => {
     const res = await api.uploadFile(file, partnerId, direction);
-    await loadData();
-    return res;
-  };
-
-  const handleRunQuickTest = async (testType, partnerId) => {
-    const res = await api.runQuickTest(testType, partnerId);
     await loadData();
     return res;
   };
@@ -128,19 +140,24 @@ export default function App() {
         {/* Content Pane */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-950/60">
           <div className="max-w-7xl mx-auto">
+            {loadError && (
+              <div role="alert" className="mb-4 rounded-lg border border-amber-800 bg-amber-950/40 p-3 text-xs text-amber-200">
+                {loadError}
+              </div>
+            )}
             {currentTab === 'dashboard' && (
               <DashboardView
                 stats={dashboardStats}
                 recentTransfers={recentTransfers}
                 onSelectTransfer={setSelectedTransfer}
                 onNavigateTab={setCurrentTab}
-                onRunQuickTest={handleRunQuickTest}
               />
             )}
 
             {currentTab === 'partners' && (
               <PartnersView
                 partners={partners}
+                error={partnersError}
                 onRefresh={loadData}
                 onCreatePartner={handleCreatePartner}
                 onToggleStatus={handleTogglePartnerStatus}
@@ -151,8 +168,8 @@ export default function App() {
               <FileUploadView
                 partners={partners}
                 onUploadFile={handleUploadFile}
-                onRunQuickTest={handleRunQuickTest}
                 onSelectTransfer={setSelectedTransfer}
+                onNavigateTab={setCurrentTab}
               />
             )}
 
@@ -160,6 +177,7 @@ export default function App() {
               <S3ExplorerView
                 s3Objects={s3Objects}
                 partners={partners}
+                bucketName={systemStatus?.s3Bucket}
                 onRefresh={loadData}
                 onDeleteObject={handleDeleteS3Object}
               />

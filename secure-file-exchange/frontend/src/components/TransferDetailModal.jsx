@@ -71,9 +71,9 @@ export default function TransferDetailModal({ transfer, onClose }) {
           <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
             <span className="flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-sky-400" />
-              <span>AWS Event-Driven Pipeline Lifecycle</span>
+              <span>Upload Validation Lifecycle</span>
             </span>
-            <span className="text-[10px] text-amber-400 font-mono">Learner Lab Active Flow</span>
+            <span className="text-[10px] text-amber-400 font-mono">Backend Processed</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
@@ -82,51 +82,51 @@ export default function TransferDetailModal({ transfer, onClose }) {
               <div>
                 <span className="text-[10px] text-sky-400 font-bold block mb-1">1. INGRESS</span>
                 <div className="font-semibold text-white text-[11px] truncate">
-                  {transfer.direction === 'INCOMING' ? 'Partner SFTP / API' : 'Outbound Dispatch'}
+                  {transfer.direction === 'INCOMING' ? 'Partner API Upload' : 'Outbound Upload'}
                 </div>
               </div>
               <div className="text-[10px] text-slate-400 mt-2 font-mono">
-                {transfer.incomingS3Key ? 's3: /incoming/' : 'Direct'}
+                {transfer.incomingS3Key || 'REST API'}
               </div>
             </div>
 
             {/* Step 2: Lambda Validation */}
             <div className="p-2.5 rounded bg-slate-900 border border-slate-800 flex flex-col justify-between">
               <div>
-                <span className="text-[10px] text-indigo-400 font-bold block mb-1">2. LAMBDA SCAN</span>
+                <span className="text-[10px] text-indigo-400 font-bold block mb-1">2. BACKEND VALIDATION</span>
                 <div className="font-semibold text-white text-[11px]">
                   SHA-256 & Policy
                 </div>
               </div>
               <div className="text-[10px] text-emerald-400 mt-2 font-mono">
-                {transfer.validationResult?.processingTimeMs || 50} ms
+                {transfer.validationResult?.processingTimeMs != null
+                  ? `${transfer.validationResult.processingTimeMs} ms`
+                  : 'Unavailable'}
               </div>
             </div>
 
             {/* Step 3: S3 Placement */}
             <div className="p-2.5 rounded bg-slate-900 border border-slate-800 flex flex-col justify-between">
               <div>
-                <span className="text-[10px] text-emerald-400 font-bold block mb-1">3. S3 STORAGE</span>
+                <span className="text-[10px] text-emerald-400 font-bold block mb-1">3. FILE STORAGE</span>
                 <div className="font-semibold text-white text-[11px] truncate">
-                  /{transfer.status.toLowerCase()}/
+                  {transfer.s3Key?.split('/')[2] || 'Unavailable'}
                 </div>
               </div>
               <div className="text-[10px] text-slate-400 mt-2 font-mono">
-                IAM Scoped
+                {transfer.s3Bucket ? 'Amazon S3' : 'Local persistence'}
               </div>
             </div>
 
-            {/* Step 4: DynamoDB & CloudWatch */}
+            {/* Step 4: Persisted audit and optional metrics */}
             <div className="p-2.5 rounded bg-slate-900 border border-slate-800 flex flex-col justify-between">
               <div>
                 <span className="text-[10px] text-purple-400 font-bold block mb-1">4. AUDIT & EMF</span>
                 <div className="font-semibold text-white text-[11px]">
-                  DynamoDB + CW
+                  Database + CW
                 </div>
               </div>
-              <div className="text-[10px] text-cyan-400 mt-2 font-mono">
-                EMF Logged
-              </div>
+              <div className="text-[10px] text-cyan-400 mt-2 font-mono">Persisted</div>
             </div>
           </div>
         </div>
@@ -177,9 +177,9 @@ export default function TransferDetailModal({ transfer, onClose }) {
           </div>
 
           <div className="sm:col-span-2">
-            <span className="text-slate-400">Destination Amazon S3 Key:</span>
+            <span className="text-slate-400">File destination:</span>
             <div className="font-mono text-xs text-emerald-400 bg-slate-950 p-2 rounded border border-slate-800 mt-1 truncate select-all">
-              s3://{transfer.s3Bucket}/{transfer.s3Key}
+              {transfer.s3Bucket ? `s3://${transfer.s3Bucket}/${transfer.s3Key}` : transfer.s3Key}
             </div>
           </div>
 

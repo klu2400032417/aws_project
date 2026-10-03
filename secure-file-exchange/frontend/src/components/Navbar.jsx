@@ -2,7 +2,10 @@ import React from 'react';
 import { Shield, Database, Cloud, RefreshCw, Layers, CheckCircle2, AlertTriangle, ExternalLink, Terminal } from 'lucide-react';
 
 export default function Navbar({ systemStatus, onRefresh, onOpenArchitecture, onToggleLogs, showLogs }) {
-  const isAws = systemStatus?.awsConnected;
+  const isAws = systemStatus?.s3Ready;
+  const storageLocation = systemStatus?.s3Bucket
+    ? `s3://${systemStatus.s3Bucket}`
+    : 'Local persistent storage';
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30">
@@ -22,9 +25,9 @@ export default function Navbar({ systemStatus, onRefresh, onOpenArchitecture, on
               </span>
             </div>
             <div className="text-[11px] text-slate-400 flex items-center gap-2">
-              <span>Amazon S3 Partitioned Storage</span>
+              <span>Partner File Exchange</span>
               <span>•</span>
-              <span className="text-amber-400/90 font-medium">Learner Lab Sandbox</span>
+              <span className="text-amber-400/90 font-medium">{systemStatus?.executionMode || 'Connecting'}</span>
             </div>
           </div>
         </div>
@@ -34,14 +37,14 @@ export default function Navbar({ systemStatus, onRefresh, onOpenArchitecture, on
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700/80 text-slate-300">
             <Cloud className="w-3.5 h-3.5 text-sky-400" />
             <span className="text-slate-400">Region:</span>
-            <span className="font-mono text-white">{systemStatus?.region || 'us-east-1'}</span>
+            <span className="font-mono text-white">{systemStatus?.region || 'Unavailable'}</span>
           </div>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700/80 text-slate-300">
             <Database className="w-3.5 h-3.5 text-amber-400" />
             <span className="text-slate-400">Bucket:</span>
-            <span className="font-mono text-sky-300 truncate max-w-[160px]" title={systemStatus?.s3Bucket}>
-              s3://{systemStatus?.s3Bucket || 'partner-exchange-lab'}
+            <span className="font-mono text-sky-300 truncate max-w-[160px]" title={storageLocation}>
+              {storageLocation}
             </span>
           </div>
 
@@ -49,7 +52,7 @@ export default function Navbar({ systemStatus, onRefresh, onOpenArchitecture, on
             isAws ? 'bg-emerald-950/60 border-emerald-700 text-emerald-300' : 'bg-indigo-950/60 border-indigo-700 text-indigo-300'
           }`}>
             <span className={`w-2 h-2 rounded-full ${isAws ? 'bg-emerald-400' : 'bg-indigo-400'} animate-pulse`}></span>
-            <span>{isAws ? 'AWS Live SDK Connected' : 'High-Fidelity Lab Mode'}</span>
+            <span>{isAws ? 'S3 Configured' : 'Local Persistence'}</span>
           </div>
         </div>
 
@@ -62,10 +65,10 @@ export default function Navbar({ systemStatus, onRefresh, onOpenArchitecture, on
                 ? 'bg-slate-700 text-sky-300 border-sky-500' 
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
             }`}
-            title="Toggle Live CloudWatch EMF Log Stream"
+            title="Toggle backend activity log"
           >
             <Terminal className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden sm:inline">CloudWatch Logs</span>
+            <span className="hidden sm:inline">Activity Logs</span>
           </button>
 
           <button

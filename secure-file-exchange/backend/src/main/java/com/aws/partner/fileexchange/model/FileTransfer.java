@@ -1,22 +1,48 @@
 package com.aws.partner.fileexchange.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "file_transfers")
 public class FileTransfer {
+    @Id
+    @Column(name = "transfer_id", nullable = false, length = 64)
     private String transferId;
+    @Column(name = "partner_id", nullable = false, length = 64)
     private String partnerId;
+    @Column(name = "partner_name")
     private String partnerName;
+    @Column(name = "file_name")
     private String fileName;
+    @Column(name = "file_size", nullable = false)
     private long fileSize;
+    @Column(name = "sha256_hash", length = 64)
     private String sha256Hash;
+    @Column(name = "direction", length = 16)
     private String direction; // INCOMING, OUTGOING
+    @Column(name = "status", length = 32)
     private String status;    // VALIDATED, QUARANTINED, DUPLICATE, FAILED
+    @Column(name = "s3_bucket")
     private String s3Bucket;
+    @Column(name = "s3_key")
     private String s3Key;
+    @Column(name = "incoming_s3_key")
     private String incomingS3Key;
+    @Embedded
     private ValidationResult validationResult;
+    @Column(name = "mime_type")
     private String mimeType;
+    @Column(name = "uploaded_by")
     private String uploadedBy;
+    @Column(name = "created_at")
     private String createdAt;
+    @Column(name = "completed_at")
     private String completedAt;
+    @Column(name = "production_concept_note", length = 1024)
     private String productionConceptNote;
 
     public FileTransfer() {}
