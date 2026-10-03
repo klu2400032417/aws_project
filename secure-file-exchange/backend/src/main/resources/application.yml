@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: secure-partner-file-exchange
+  datasource:
+    url: jdbc:h2:file:./data/partnersdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 105MB
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket-name: ${S3_BUCKET_NAME:secure-partner-file-exchange-lab}
+    create-bucket-if-missing: true
+  dynamodb:
+    table-transfers: ${DYNAMO_TABLE_TRANSFERS:PartnerFileTransfers}
+    table-partners: ${DYNAMO_TABLE_PARTNERS:Partners}
+    table-events: ${DYNAMO_TABLE_EVENTS:SecurityEvents}
+  cloudwatch:
+    namespace: ${CLOUDWATCH_NAMESPACE:SecureFileExchange/Production}
+  transfer-family:
+    status: PRODUCTION_CONCEPT_ONLY
+    note: "AWS Transfer Family is restricted in AWS Learner Lab. Production architecture routes SFTP into S3. The active implementation uses direct S3 ingestion with identical Lambda validation."
+
+app:
+  storage:
+    local-root: "C:/Users/ASUS/.gemini/antigravity/scratch/secure-file-exchange/storage"
+    enable-local-disk-backup: true
+  security:
+    max-file-size-mb: 50
+    restricted-extensions: [".exe", ".bat", ".cmd", ".sh", ".vbs", ".scr", ".dll", ".ps1", ".jar", ".app"]
+    allowed-default-extensions: [".csv", ".json", ".xml", ".pdf", ".txt", ".xlsx", ".pgp", ".zip"]
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
